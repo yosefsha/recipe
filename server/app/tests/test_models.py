@@ -11,3 +11,6 @@ class SampleTestCase(TestCase):
     def test_django_is_installed(self):
         """Test Django is properly installed."""
         self.assertTrue(hasattr(django, 'VERSION'))
+    
+    def yet_another_test(self):
+        pass
