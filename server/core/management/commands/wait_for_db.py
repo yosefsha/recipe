@@ -18,4 +18,5 @@ class Command(BaseCommand):
             except (OperationalError, Psycopg2OpError):
                 time.sleep(1)
         
-        return super().handle(*args, **options)
+        self.stdout.write(self.style.SUCCESS('Database available!'))
+        
