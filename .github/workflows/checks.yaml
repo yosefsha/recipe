@@ -15,7 +15,13 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Debug - Check directory structure
+        run: |
+          docker compose run --rm app sh -c "ls -la /app"
+          docker compose run --rm app sh -c "ls -la /app/app"
+          docker compose run --rm app sh -c "ls -la /app/app/tests"
+          docker compose run --rm app sh -c "find /app -name '*.py' -path '*/tests/*'"
       - name: Test
-        run: docker compose run --rm app sh -c "python manage.py test"
+        run: docker compose run --rm app sh -c "python manage.py test --verbosity=2"
 
 

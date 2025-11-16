@@ -42,10 +42,15 @@ RUN pip install --upgrade pip && \
         build-base postgresql-dev musl-dev && \
     pip install --no-cache-dir -r /tmp/requirements.txt && \
     rm -rf /tmp/requirements.txt && \
-    apk del .tmp-build-deps
+    apk del .tmp-build-deps && \
+    adduser \
+        --disabled-password \
+        --no-create-home \
+        django-user
 
-# Copy app without tests
+# Copy all necessary files (but will remove tests)
 COPY --chown=django-user:django-user manage.py ./
+COPY --chown=django-user:django-user core ./core
 COPY --chown=django-user:django-user app ./app
 RUN rm -rf ./app/tests
 
