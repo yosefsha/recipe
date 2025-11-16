@@ -13,7 +13,7 @@ class Command(BaseCommand):
         db_up = False
         while db_up is False:
             try:
-                self.check(databases=['defaults'])
+                self.check(databases=['default'])
                 db_up = True
             except (OperationalError, Psycopg2OpError):
                 time.sleep(1)
