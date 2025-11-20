@@ -9,9 +9,19 @@ from rest_framework.test import APIClient
 from rest_framework import status
 
 
-CREATE_USER_URL = reverse('user:create')
-TOKEN_URL = reverse('user:token')
-ME_URL = reverse('user:me')
+def get_create_user_url():
+    """Return the create user URL"""
+    return reverse('user:create')
+
+
+def get_token_url():
+    """Return the token URL"""
+    return reverse('user:token')
+
+
+def get_me_url():
+    """Return the me URL"""
+    return reverse('user:me')
 
 
 def create_user(**params):
@@ -32,7 +42,7 @@ class PublicUserApiTests(TestCase):
             'password': 'testpass123',
             'name': 'Test Name',
         }
-        res = self.client.post(CREATE_USER_URL, payload)
+        res = self.client.post(get_create_user_url(), payload)
 
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
         user = get_user_model().objects.get(email=payload['email'])
@@ -47,7 +57,7 @@ class PublicUserApiTests(TestCase):
             'name': 'Test Name',
         }
         create_user(**payload)
-        res = self.client.post(CREATE_USER_URL, payload)
+        res = self.client.post(get_create_user_url(), payload)
 
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -58,7 +68,7 @@ class PublicUserApiTests(TestCase):
             'password': 'pw',
             'name': 'Test name',
         }
-        res = self.client.post(CREATE_USER_URL, payload)
+        res = self.client.post(get_create_user_url(), payload)
 
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         user_exists = get_user_model().objects.filter(
@@ -79,7 +89,7 @@ class PublicUserApiTests(TestCase):
             'email': user_details['email'],
             'password': user_details['password'],
         }
-        res = self.client.post(TOKEN_URL, payload)
+        res = self.client.post(get_token_url(), payload)
 
         self.assertIn('token', res.data)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
@@ -89,7 +99,7 @@ class PublicUserApiTests(TestCase):
         create_user(email='test@example.com', password='goodpass')
 
         payload = {'email': 'test@example.com', 'password': 'badpass'}
-        res = self.client.post(TOKEN_URL, payload)
+        res = self.client.post(get_token_url(), payload)
 
         self.assertNotIn('token', res.data)
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
@@ -97,14 +107,14 @@ class PublicUserApiTests(TestCase):
     def test_create_token_blank_password(self):
         """Test posting a blank password returns an error"""
         payload = {'email': 'test@example.com', 'password': ''}
-        res = self.client.post(TOKEN_URL, payload)
+        res = self.client.post(get_token_url(), payload)
 
         self.assertNotIn('token', res.data)
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_retrieve_user_unauthorized(self):
         """Test authentication is required for users"""
-        res = self.client.get(ME_URL)
+        res = self.client.get(get_me_url())
 
         self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -123,7 +133,7 @@ class PrivateUserApiTests(TestCase):
 
     def test_retrieve_profile_success(self):
         """Test retrieving profile for logged in user"""
-        res = self.client.get(ME_URL)
+        res = self.client.get(get_me_url())
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data, {
@@ -133,7 +143,7 @@ class PrivateUserApiTests(TestCase):
 
     def test_post_me_not_allowed(self):
         """Test POST is not allowed for the me endpoint"""
-        res = self.client.post(ME_URL, {})
+        res = self.client.post(get_me_url(), {})
 
         self.assertEqual(res.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
@@ -141,9 +151,34 @@ class PrivateUserApiTests(TestCase):
         """Test updating the user profile for the authenticated user"""
         payload = {'name': 'Updated name', 'password': 'newpassword123'}
 
-        res = self.client.patch(ME_URL, payload)
+        res = self.client.patch(get_me_url(), payload)
 
         self.user.refresh_from_db()
         self.assertEqual(self.user.name, payload['name'])
         self.assertTrue(self.user.check_password(payload['password']))
         self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+
+class SuperuserTests(TestCase):
+    """Test superuser (admin) functionality"""
+
+    def test_create_superuser(self):
+        """Test creating a superuser"""
+        user = get_user_model().objects.create_superuser(
+            email='admin@example.com',
+            password='testpass123',
+        )
+
+        self.assertTrue(user.is_superuser)
+        self.assertTrue(user.is_staff)
+
+    def test_superuser_has_all_permissions(self):
+        """Test superuser has all permissions by default"""
+        user = get_user_model().objects.create_superuser(
+            email='admin@example.com',
+            password='testpass123',
+        )
+
+        # Superusers have all permissions
+        self.assertTrue(user.has_perm('any.permission'))
+        self.assertTrue(user.has_module_perms('any_app'))
