@@ -5,24 +5,28 @@ LABEL maintainer="sh.yosef@gmail.com"
 
 WORKDIR /app
 
-# Create user first
-RUN adduser \
-        --disabled-password \
-        --no-create-home \
-        django-user
-
+# Install dependencies first (before copying code for better caching)
 COPY requirements.txt /tmp/requirements.txt
-COPY --chown=django-user:django-user . /app
 
-EXPOSE 8000
-
-RUN pip install --upgrade pip && \
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip && \
     apk add --update --no-cache postgresql-client && \
     apk add --update --no-cache --virtual .tmp-build-deps \
         build-base postgresql-dev musl-dev && \
     pip install --no-cache-dir -r /tmp/requirements.txt && \
     rm -rf /tmp/requirements.txt && \
     apk del .tmp-build-deps
+
+# Create user
+RUN adduser \
+        --disabled-password \
+        --no-create-home \
+        django-user
+
+# Copy application code last (changes most frequently)
+COPY --chown=django-user:django-user . /app
+
+EXPOSE 8000
 
 USER django-user
 
@@ -32,18 +36,21 @@ FROM python:3.11-alpine AS production
 LABEL maintainer="sh.yosef@gmail.com"
 
 WORKDIR /app
+
+# Install dependencies first (before copying code for better caching)
 COPY requirements.txt /tmp/requirements.txt
 
-EXPOSE 8000
-
-RUN pip install --upgrade pip && \
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip && \
     apk add --update --no-cache postgresql-client && \
     apk add --update --no-cache --virtual .tmp-build-deps \
         build-base postgresql-dev musl-dev && \
     pip install --no-cache-dir -r /tmp/requirements.txt && \
     rm -rf /tmp/requirements.txt && \
-    apk del .tmp-build-deps && \
-    adduser \
+    apk del .tmp-build-deps
+
+# Create user
+RUN adduser \
         --disabled-password \
         --no-create-home \
         django-user
@@ -53,6 +60,8 @@ COPY --chown=django-user:django-user manage.py ./
 COPY --chown=django-user:django-user core ./core
 COPY --chown=django-user:django-user app ./app
 RUN rm -rf ./app/tests
+
+EXPOSE 8000
 
 USER django-user
 

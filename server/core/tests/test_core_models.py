@@ -3,7 +3,7 @@ Tests for models.
 """
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-
+from core import models
 
 class UserModelTests(TestCase):
     """Test models."""
